@@ -1,0 +1,367 @@
+config.json 参数说明
+
+一、常用修改项
+
+1. acquisition.display_unit
+显示单位。只影响界面、表格和导出显示，不改变真实物理判断基准。
+可选值：
+- m/s^2
+- mm/s^2
+- um/s^2
+
+也可以写简写：
+- m
+- mm
+- um
+
+当前配置为 mm/s^2。
+
+2. acquisition.fft_display_mode
+频谱显示模式。
+可选值：
+- amplitude：幅值频谱，单位跟 display_unit 一致，例如 mm/s^2，适合电机故障频率点检测。
+- asd：加速度谱密度，单位为 display_unit/√Hz，例如 mm/s^2/√Hz，适合观察噪声地板和宽频随机振动。当前配置使用此模式。
+
+注意：切换到 asd 后，频谱数值单位会变，判断阈值需要重新用 OK/NG 数据标定。
+
+3. product_settings.acceleration_sensitivity_m_s2_per_mv
+采集传感器的加速度灵敏度，单位是 (m/s^2)/mV。
+程序换算公式：
+采集电压 V × 1000 = mV
+mV × acceleration_sensitivity_m_s2_per_mv = m/s^2
+再按 display_unit 换算成界面显示单位。
+
+当前实际值以 config.json 里的 product_settings.acceleration_sensitivity_m_s2_per_mv 为准。
+
+4. product_settings.wave_threshold_m_s2
+频谱尖峰统计阈值，基础单位固定为 m/s^2。
+程序会按 display_unit 自动换算显示。
+例如 display_unit 为 mm/s^2 时，0.01 m/s^2 会显示为 10 mm/s^2。
+
+5. product_settings.bearing_frequency.points[].upper_limit_m_s2
+9 个轴承特征频率点的幅值上限，基础单位固定为 m/s^2。
+程序会按 display_unit 自动换算显示和判断。
+
+6. acquisition.judgment_max_freq_hz
+合格/不合格判断使用的最高频率。
+只影响判断，不影响频谱显示和导出。
+当前为 50000。
+
+7. acquisition.fft_highpass_hz
+FFT 频谱高通截止频率，单位 Hz。
+当前为 100。
+作用：频谱分析时忽略 100 Hz 以下的低频/DC 附近成分。
+只影响右侧频谱图、频谱导出、特征频率和频段统计，不影响左侧时域图、RMS、Vpp。
+
+8. acquisition.fft_lowpass_hz
+FFT 频谱低通截止频率，单位 Hz。
+当前为 25600。
+作用：频谱分析时忽略 25600 Hz 以上的频率成分。
+只影响右侧频谱图、频谱导出、特征频率和频段统计，不影响左侧时域图、RMS、Vpp。
+
+9. acquisition.fft_remove_mean
+FFT 前是否去除平均值。
+当前为 true。
+作用：去掉信号零点偏移，减少低频和直流分量对频谱的影响。
+建议保持 true。
+
+10. acquisition.fft_window_amplitude_correction
+FFT 使用 Hanning 窗后的幅值补偿。
+当前为 true。
+作用：补偿窗函数导致的频谱峰值偏低问题。
+建议在标定 OK/NG 阈值前保持 true。
+
+
+二、产品参数
+
+1. product
+当前选中的产品信息。
+- model：当前型号
+- quantity：数量
+- operator：操作员
+- default_status：默认状态，通常为 合格
+
+2. product_settings
+所有产品共用的测试参数。
+如果大多数型号参数一样，就只改这里。
+
+3. products
+产品型号列表。
+每个产品一般只需要写：
+- model
+- quantity
+- operator
+
+如果某个型号参数和公共参数不同，才在该型号下面增加 settings 覆盖。
+例如：
+{
+  "model": "某型号",
+  "quantity": "0",
+  "operator": "",
+  "settings": {
+    "acceleration_sensitivity_m_s2_per_mv": 0.083018
+  }
+}
+
+
+三、轴承特征频率参数
+
+product_settings.bearing_frequency.base_frequency_hz
+基准频率，当前为 300 Hz。
+
+product_settings.bearing_frequency.range_percent
+频率搜索范围百分比，当前为 2。
+例如基准 300 Hz、系数 0.3942、范围 2%：
+搜索范围 = 300 × (1 ± 2%) × 0.3942，约为 115.89～120.63 Hz。
+
+product_settings.bearing_frequency.points
+9 个轴承特征频率点。
+每个点包含：
+- name：显示名称
+- coefficient：乘数系数
+- upper_limit_m_s2：该点幅值上限，基础单位 m/s^2
+
+
+四、频段参数
+
+product_settings.frequency_band_groups
+低频段、中频段、高频段配置。
+每个频段包含：
+- name：频段名称
+- start_hz：起始频率
+- end_hz：结束频率
+
+程序会在每个频段内统计：
+- 尖峰数量
+- 最大尖峰频率
+- 最大尖峰值
+- 能量和
+
+检测记录中的主频字段：
+- 全频主频/全频主幅值：在有效 FFT 范围内选取幅值最大的频点。有效范围同时受 fft_highpass_hz、fft_lowpass_hz 和 fft_max_freq 限制。
+- 轴承特征主频/轴承特征主幅值：只比较 bearing_frequency.points 配置的 9 个轴承特征搜索窗口，取其中幅值最大的实际频点。
+- 固定频率点（例如 300 Hz）的幅值单独记录；它可以成为全频主频，但不会参与轴承特征主频的选择。
+
+product_settings.fixed_frequency_points
+固定采集频率点。
+程序会在 FFT 频谱中读取这些固定频率百分比范围内的最高幅值，并写入下方检测记录表。
+当前已配置：
+300、600、900、1200、1500、1800、2100、2400、2700、3000、3300、3600 Hz。
+
+product_settings.fixed_frequency_range_percent
+全部固定频率点共用的搜索范围百分比，当前为 2。
+计算公式：目标频率 × (1 ± fixed_frequency_range_percent%)。
+例如 300 Hz、范围 2% 时，在 294～306 Hz 内取最高幅值；记录值对应的实际峰值频率也会插入原始频谱导出。
+设置为 0 时，程序恢复为读取最接近目标频率的 FFT 频点。
+
+推荐写法：
+{
+  "name": "300Hz",
+  "frequency_hz": 300
+}
+
+如果某个频点需要使用固定 Hz 范围覆盖统一百分比，可以增加 search_width_hz：
+{
+  "name": "300Hz",
+  "frequency_hz": 300,
+  "search_width_hz": 2
+}
+
+search_width_hz 的优先级高于 fixed_frequency_range_percent。
+
+
+五、采集参数
+
+acquisition.source
+采集模式，也可以直接在界面顶部选择：
+- labjack：使用原来的 LabJack AIN 频谱输入，默认模式。
+- ni9234：使用与动平衡程序相同的 NI-9234 IEPE 加速度传感器。
+切换模式前必须停止采集并退出自动化。两个程序不能同时占用同一个 NI 通道。
+
+acquisition.input_channel
+LabJack 模式的采集卡输入通道，当前为 AIN3。
+
+acquisition.scan_rate
+采样率，单位 Hz，当前为 100000。
+
+acquisition.scans_per_read
+每次从 LabJack 驱动读取的点数，当前为 20000。
+100 kHz 采样率下相当于每约 0.2 秒读取一次，可降低 Windows 工控机上的驱动调用和线程调度压力。
+
+acquisition.display_time_sec
+时域图显示的时间长度，单位秒。
+
+acquisition.display_refresh_hz
+波形和频谱图每秒最多刷新次数，当前为 5。
+只影响界面刷新流畅度，不影响后台采样率、检测结果和导出数据。
+
+acquisition.avg_time_sec
+每条检测记录的采样窗口长度，单位秒，当前为 3 秒。
+程序按“实际采样率 × 该时间”凑满采样点后才生成记录，不依赖 Windows 界面定时器，因此电脑忙时不会把 3 秒窗口拉长或缩短。
+
+acquisition.records_per_motor
+自动化模式下每台电机生成的检测记录条数，当前为 1。
+每条记录的长度由 avg_time_sec 决定。设置为 3 且 avg_time_sec 为 3 秒时，每台电机连续记录约 9 秒；全部 3 条记录和对应原始频谱保存成功后，才向 PLC 发送当前电机采集完成。
+
+acquisition.record_value_mode
+RMS 和 Vpp 记录方式。
+可选值：
+- window_raw：把整个记录周期内的所有采样点一起计算，当前默认使用。
+- batch_mean：先每批计算 RMS/Vpp，再对多批结果取平均。
+
+acquisition.time_remove_mean
+是否在时域分析前去除整流偏置，当前为 true。
+true 时左图、FFT 和 RMS 使用去平均值后的振动分量；原始换算值仍保留在“导出当前波形/频谱”的 value_raw 列中。
+电机振动检测建议保持 true，可避免不同电脑接地、采集卡零点偏置造成整条波形上下平移以及 RMS 虚高。Vpp 不受减去常数影响。
+
+acquisition.invalid_input_voltage_abs_max
+输入电压绝对值安全检查，单位 V，当前为 10.5。
+发现 NaN、无穷大、LJM 丢样占位值 -9999 或超过该电压时，当前窗口作废并停止，不把坏数据写入检测记录。
+
+acquisition.labjack
+两台电脑必须保持一致的 LabJack 打开方式和模拟输入参数：
+- device_type：设备类型，ANY 表示自动识别。
+- connection_type：连接方式，当前固定 USB，避免不同电脑选择到不同连接路径。
+- identifier：设备标识，ANY 表示连接发现的设备；多台采集卡时建议填序列号。
+- stream_receive_timeout_ms：流读取超时，单位毫秒，当前 3000。
+- ain_range_v：AIN 输入量程，当前 10.0 V。
+- ain_negative_channel：负端通道，199 表示单端输入对 GND。
+- stream_resolution_index：流分辨率索引，当前 0。
+- stream_settling_us：通道稳定时间，当前 0 微秒。
+
+acquisition.ni9234
+NI-9234 加速度模式参数，与动平衡项目使用同一套硬件设置：
+- module：NI MAX 中的模块名，默认 cDAQ1Mod1；如果只发现一块 NI-9234，程序会自动识别实际名称。
+- channel：加速度输入通道，默认 ai0。
+- scan_rate：采样率，默认 25600 S/s/ch。
+- scans_per_read：每次读取点数，默认 1500。
+- iepe_current_ma：IEPE 恒流激励，默认 2.0 mA。
+- sensitivity_mv_per_g：传感器灵敏度，PCB 353B15 标称值默认 10 mV/g，正式检测应填写校准证书值。
+- min_g / max_g：DAQmx 加速度输入量程，默认 ±500 g。
+- invalid_input_g_abs_max：数据安全上限，默认 500 g。
+
+NI 模式直接读取 DAQmx 换算后的 g，再转换成程序统一使用的 m/s² 或 mm/s²；不使用 product_settings.acceleration_sensitivity_m_s2_per_mv。Windows 目标电脑需要安装 NI-DAQmx、在 NI MAX 中确认 NI-9234 自检通过，并在当前 Python 环境安装 nidaqmx。
+
+采集由独立后台线程持续读取，界面绘图、FFT 或表格刷新变慢不会阻塞采集。界面会显示“缓冲 设备/驱动”，长期接近 0 为正常；持续增大表示电脑或 USB 读取跟不上。
+
+acquisition.fft_max_freq
+界面频谱图显示上限，单位 Hz。
+
+acquisition.fft_highpass_hz / acquisition.fft_lowpass_hz
+频谱分析用的高通/低通截止频率，单位 Hz。
+当前设置为 100 Hz 到 25600 Hz。
+这两个参数不改变时域图和 RMS/Vpp，只改变 FFT 频谱相关结果。
+
+acquisition.fft_remove_mean
+FFT 前去平均值，建议保持 true。
+
+acquisition.fft_window_amplitude_correction
+Hanning 窗幅值补偿，建议保持 true。
+
+acquisition.time_y_limit_m_s2
+时域图纵轴范围，基础单位 m/s^2。
+程序会按 display_unit 自动换算显示。
+auto_scale 为 true 时，左侧时域图会自动缩放纵轴，只影响显示，不影响 RMS、Vpp、频谱和判断。
+- min / max：自动缩放关闭时使用的固定纵轴范围。
+- auto_percentile：自动缩放取样百分位，默认 99.0，数值越大越不容易裁掉尖峰。
+- auto_min_range_m_s2：自动缩放的最小显示范围，基础单位 m/s^2。
+- auto_margin：自动缩放余量，默认 1.25。
+- auto_update_interval_sec：自动缩放刷新间隔，默认 0.2 秒，工控机配置低时不建议太小。
+
+acquisition.fft_y_limit_m_s2
+频谱图纵轴范围，基础单位 m/s^2。
+auto_scale 为 true 时，程序会自动调整频谱纵轴。
+
+acquisition.raw_spectrum_export
+原始频谱导出设置。
+- frequency_interval_hz：相邻两行频率值的间隔，单位 Hz，当前为 2.56；该参数存在时优先使用。
+- include_detection_points：是否把检测使用的精确频率额外插入原始频谱，当前为 true。
+- points：旧版按总点数导出的兼容参数；删除 frequency_interval_hz 或将其设为 null 时才使用。
+- max_freq：导出最高频率
+- encoding：导出编码，当前为 gbk
+导出数据行数约为 max_freq ÷ frequency_interval_hz。例如最高频率 25600 Hz、间隔 2.56 Hz 时输出 10000 行；间隔 1 Hz 时输出约 25600 行。
+include_detection_points 为 true 时，还会插入轴承理论频率、固定频率，以及本次检测实际选中的主频/特征峰值/固定频率搜索峰值/频段尖峰频率，并按频率重新排序。因此最终行数会比上述估算略多，插入位置附近的间隔也不再完全固定。
+控制界面勾选“自动保存原始频谱”后，自动化模式会为每台电机的每条检测记录保存一份原始频谱，目录为产品日期目录下的 spectrum_raw；程序启动时默认勾选，如本次不需要可在进入自动化前取消。
+
+
+六、PLC 参数
+
+plc.enabled
+是否启用 PLC 通讯。
+
+plc.protocol
+PLC 通讯协议，当前预留 fins_udp。
+
+plc.host
+PLC IP 地址。
+
+plc.port
+PLC 端口，FINS UDP 通常为 9600。
+
+plc.poll_interval_ms
+上位机读取 PLC 状态的周期，单位毫秒，当前为 100 ms。
+
+plc.heartbeat_interval_ms
+上位机心跳加 1 的周期，当前为 1000 ms。
+心跳不写入界面运行日志；PyCharm 控制台在 DM3503 首次发送及每增加 10 次时汇总打印 DM3503/DM3504。
+界面底部圆点显示心跳状态：亮绿闪烁表示 DM3504 已更新，深绿表示连接正常并等待下一次心跳，黄色表示连接中或心跳未更新，红色表示通信中断/PLC故障，灰色表示PLC未启用。
+
+plc.heartbeat_timeout_sec
+PLC 心跳连续不变的告警时间，单位秒。
+达到该时间后界面心跳圆点变黄并记录一次告警，但不会停止采集、退出自动化或清除测试进度。
+
+plc.auto_resume_stable_sec
+PLC 通信、急停或故障恢复后，状态需要连续稳定的时间，单位秒，当前为 1 秒。
+达到稳定时间后，上位机会核对托盘编号、当前电机位置和完成握手，再从断点继续。
+
+plc.checkpoint_enabled
+是否启用自动化断点保存。建议产线运行保持 true。
+
+plc.checkpoint_dir
+自动化断点目录。默认 data/automation_checkpoints。
+程序按“产品型号 + 托盘编号”保存当前表格、已完成位置、当前电机记录数和完成握手状态。
+PLC 通信中断、急停或故障只会暂停自动化；恢复稳定后自动续测，不要求从 1 号重新开始。
+程序异常关闭或电脑重启后，再次点击“进入自动化”，同型号、同托盘且配置一致时会恢复断点。
+整托数据成功保存后，对应断点会自动删除。
+
+plc.positions_per_tray
+每个托盘的电机数量，当前为 10。
+
+plc.addresses
+PLC 地址表，当前使用 DM3008、DM3500～DM3505 和 DM3508：
+- DM3008：PLC 写、上位机读，当前托盘编号（0 表示无有效托盘）。
+- DM3500：上位机写。bit0 开始，bit1 停止，bit2 当前电机采集完成，bit3 上位机故障。
+- DM3501：PLC 写。bit0 急停，bit1 当前电机到位/允许采集，bit2 全部测试完成，bit3 PLC 故障。
+- DM3508：PLC 写，当前电机位置 1～10。
+- DM3503：上位机写，上位机心跳计数。
+- DM3504：PLC 写，PLC 心跳计数。
+- DM3505：上位机写。bit1～bit10 分别对应 1～10 号电机频谱测试结果；1=该电机全部检测记录合格，0=未完成或不合格，bit0 不使用。新托盘开始时整字清零。
+
+到位和采集完成采用保持式握手：PLC 保持到位为 1，直到收到采集完成；上位机保持采集完成为 1，直到 PLC 清除到位。
+进入自动化后，上位机先读取 DM3008 作为当前托盘编号，待命时 DM3500.00 保持为 0；读取到 DM3501.01=1 和有效的 DM3508 位置后，采集期间置 DM3500.00=1。当前电机达到配置的记录条数后，上位机先更新对应的 DM3505 结果位，再将 DM3500.00 清零、DM3500.02 置位；PLC 清除 DM3501.01 后上位机再清除 DM3500.02。
+产线追溯与托盘映射
+==================
+
+traceability.database_path
+频谱电脑本地 SQLite 数据库路径，默认 data/traceability.db。
+
+traceability.station_code
+频谱工位编码，后续随频谱结果上传 MES。
+
+traceability.mapping_api.enabled
+是否启用托盘映射接收服务。当前产线联调配置为 true。
+
+traceability.mapping_api.bind_host / port / token
+局域网映射服务监听地址、端口和双方共享令牌。跑合电脑必须配置相同令牌，
+并将 base_url 指向频谱上位机：http://192.168.250.100:8765。当前端口为 8765；
+首次运行时需要允许 Windows 防火墙放行该 TCP 端口。
+
+双机联调验证
+频谱程序启动日志应显示“托盘映射接收服务已启动”。跑合电脑保存托盘号和
+10 个 SN 后，频谱界面输入同一托盘号并按回车；显示“SN 映射：已匹配
+10/10”即表示接收成功。鼠标停留在状态文字上可查看 1～10 号坑位对应 SN。
+
+控制界面中的“当前托盘编号”可手动输入，方便手动测试。
+自动化模式下该字段由 PLC DM3008 自动更新；退出自动化后可再次手动输入。
+程序保留 PLC 的 1～10 电机位置，并用“托盘编号 + 电机位置”查询本地托盘映射，将真实产品 SN 写入检测记录和频谱导出。
+托盘号留空或查不到对应 SN 时，产品 SN 字段留空，不会中止采集、判断或文件保存。

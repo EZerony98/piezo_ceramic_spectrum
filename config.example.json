@@ -1,0 +1,72 @@
+{
+  "app": {
+    "title": "贝丰压电陶瓷频谱分析系统 - 操作端",
+    "export_dir": "exports",
+    "auto_connect_labjack": true
+  },
+  "traceability": {
+    "database_path": "data/traceability.db",
+    "station_code": "PIEZO_SPECTRUM_01",
+    "mapping_api": {
+      "enabled": false,
+      "bind_host": "0.0.0.0",
+      "port": 8765,
+      "token": "change-me"
+    },
+    "mes": {
+      "enabled": false,
+      "base_url": "http://MES_SERVER_IP:8000",
+      "api_token": "",
+      "upload_path": "/api/test-records",
+      "heartbeat_path": "/api/stations/heartbeat",
+      "timeout_seconds": 3,
+      "sync_interval_seconds": 10,
+      "batch_size": 50
+    }
+  },
+  "product": {
+    "model": "压电陶瓷",
+    "quantity": "0",
+    "operator": "",
+    "default_status": "合格"
+  },
+  "acquisition": {
+    "source": "labjack",
+    "input_channel": "AIN3",
+    "scan_rate": 100000,
+    "scans_per_read": 20000,
+    "display_time_sec": 1.5,
+    "display_refresh_hz": 5,
+    "avg_time_sec": 3.0,
+    "records_per_motor": 1,
+    "display_unit": "mm/s^2",
+    "fft_display_mode": "asd",
+    "labjack": {
+      "device_type": "ANY",
+      "connection_type": "USB",
+      "identifier": "ANY",
+      "stream_receive_timeout_ms": 3000,
+      "ain_range_v": 10.0,
+      "ain_negative_channel": 199,
+      "stream_resolution_index": 0,
+      "stream_settling_us": 0
+    },
+    "ni9234": {
+      "module": "cDAQ1Mod1",
+      "channel": "ai0",
+      "scan_rate": 25600,
+      "scans_per_read": 1500,
+      "iepe_current_ma": 2.0,
+      "sensitivity_mv_per_g": 10.0,
+      "min_g": -500.0,
+      "max_g": 500.0,
+      "invalid_input_g_abs_max": 500.0
+    }
+  },
+  "plc": {
+    "enabled": false,
+    "protocol": "fins_udp",
+    "host": "PLC_IP",
+    "port": 9600
+  }
+}
