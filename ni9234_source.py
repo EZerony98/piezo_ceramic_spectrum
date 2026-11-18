@@ -70,7 +70,7 @@ class Ni9234Source:
         self.config = dict(config or {})
         self.task = None
         self.module_name = ""
-        self.scan_rate = float(self.config.get("scan_rate", 25_600.0))
+        self.scan_rate = float(self.config.get("scan_rate", 51_200.0))
         self.scans_per_read = max(int(self.config.get("scans_per_read", 1500)), 1)
 
     def open(self) -> dict:
@@ -89,7 +89,7 @@ class Ni9234Source:
                 "请安装 NI-DAQmx 驱动，并在当前 Python 环境执行 pip install nidaqmx"
             ) from exc
 
-        requested_rate = float(self.config.get("scan_rate", 25_600.0))
+        requested_rate = float(self.config.get("scan_rate", 51_200.0))
         if not 1_652 <= requested_rate <= 51_200:
             raise RuntimeError("NI-9234 扫描率必须在 1,652 到 51,200 S/s/ch 之间")
 

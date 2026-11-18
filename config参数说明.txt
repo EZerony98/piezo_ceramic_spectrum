@@ -233,7 +233,7 @@ acquisition.ni9234
 NI-9234 加速度模式参数，与动平衡项目使用同一套硬件设置：
 - module：NI MAX 中的模块名，默认 cDAQ1Mod1；如果只发现一块 NI-9234，程序会自动识别实际名称。
 - channel：加速度输入通道，默认 ai0。
-- scan_rate：采样率，默认 25600 S/s/ch。
+- scan_rate：采样率，默认 51200 S/s/ch。按奈奎斯特频率可得到最高 25600 Hz 的真实 FFT 数据，界面按 fft_max_freq 显示到 25000 Hz，与原 LabJack 频谱范围一致。
 - scans_per_read：每次读取点数，默认 1500。
 - iepe_current_ma：IEPE 恒流激励，默认 2.0 mA。
 - sensitivity_mv_per_g：传感器灵敏度，PCB 353B15 标称值默认 10 mV/g，正式检测应填写校准证书值。

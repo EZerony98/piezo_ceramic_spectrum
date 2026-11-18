@@ -54,7 +54,7 @@
     "ni9234": {
       "module": "cDAQ1Mod1",
       "channel": "ai0",
-      "scan_rate": 25600,
+      "scan_rate": 51200,
       "scans_per_read": 1500,
       "iepe_current_ma": 2.0,
       "sensitivity_mv_per_g": 10.0,

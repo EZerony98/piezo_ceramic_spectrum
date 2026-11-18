@@ -18,7 +18,7 @@ from main import (
     merge_export_frequencies,
     normalize_acquisition_source,
 )
-from ni9234_source import select_ni9234_module
+from ni9234_source import Ni9234Source, select_ni9234_module
 from traceability_store import TraceabilityStore
 from tray_mapping_api import TrayMappingApiServer
 
@@ -61,6 +61,15 @@ class AcquisitionSourceTests(unittest.TestCase):
         np.testing.assert_allclose(converted, [9806.65, -4903.325])
         self.assertEqual(worker.requested_scan_rate, 25600)
         self.assertEqual(worker.scans_per_read, 1500)
+
+    def test_ni_defaults_cover_original_25_khz_fft_range(self):
+        worker = AcquisitionWorker(None, {
+            "source": "ni9234",
+            "ni9234": {},
+        })
+        source = Ni9234Source({})
+        self.assertEqual(worker.requested_scan_rate, 51200)
+        self.assertEqual(source.scan_rate, 51200)
 
 
 class TextWidgetStub:

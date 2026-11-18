@@ -242,7 +242,7 @@ DEFAULT_CONFIG = {
         "ni9234": {
             "module": "cDAQ1Mod1",
             "channel": "ai0",
-            "scan_rate": 25600,
+            "scan_rate": 51200,
             "scans_per_read": 1500,
             "iepe_current_ma": 2.0,
             "sensitivity_mv_per_g": 10.0,
@@ -1253,7 +1253,7 @@ class AcquisitionWorker(QThread):
         self.ni_config = deepcopy(self.config.get("ni9234", {}))
         self.input_channel = str(self.config.get("input_channel", "AIN3"))
         if self.source_type == ACQUISITION_SOURCE_NI9234:
-            self.requested_scan_rate = max(float(self.ni_config.get("scan_rate", 25600)), 1.0)
+            self.requested_scan_rate = max(float(self.ni_config.get("scan_rate", 51200)), 1.0)
             self.scans_per_read = max(int(self.ni_config.get("scans_per_read", 1500)), 1)
             self.source_label = "NI-9234 加速度传感器"
         else:
@@ -2437,7 +2437,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
             module = str(self.ni9234_config.get("module", "cDAQ1Mod1")).strip()
             channel = str(self.ni9234_config.get("channel", "ai0")).strip()
             self.input_channel = channel if "/" in channel else f"{module}/{channel}"
-            self.scan_rate = max(int(float(self.ni9234_config.get("scan_rate", 25600))), 1)
+            self.scan_rate = max(int(float(self.ni9234_config.get("scan_rate", 51200))), 1)
             self.scans_per_read = max(int(self.ni9234_config.get("scans_per_read", 1500)), 1)
         else:
             self.input_channel = self.labjack_input_channel
@@ -3057,7 +3057,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
             "PLC可跳过跑合测试不合格的电机；上位机按实际到位位置采集，跳过位置不生成频谱记录且DM3505对应位保持0。\n"
             "10个位置全部完成后，系统自动保存记录，并在PLC复位全部完成信号后等待下一托。\n"
             "顶部“采集模式”可选择原 LabJack 频谱输入或 NI-9234 加速度传感器；切换前必须停止采集并退出自动化。\n"
-            "NI 模式沿用动平衡设备的 cDAQ/NI-9234、ai0、25.6 kS/s 和 2.0 mA IEPE 激励，灵敏度以 config.json 为准。\n"
+            "NI 模式使用 cDAQ/NI-9234、ai0、51.2 kS/s 和 2.0 mA IEPE 激励，可覆盖与原频谱模式相同的 0～25 kHz FFT 范围；灵敏度以 config.json 为准。\n"
             "“手动采集”不依赖PLC，直接连续采集，并按 acquisition.avg_time_sec 设置的周期添加一条记录。\n"
             "采集在后台线程持续读取，并按实际采样率凑满采样点；界面卡顿不会改变记录窗口长度。\n"
             "状态中的设备/LJM缓冲应长期接近0，持续增大或出现-9999时当前窗口会作废。\n"
