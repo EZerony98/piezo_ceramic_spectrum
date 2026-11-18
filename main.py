@@ -2020,6 +2020,10 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
     def current_tray_id(self):
         return self.txt_tray_id.text().strip()
 
+    def current_product_code(self):
+        widget = getattr(self, "txt_product_code", None)
+        return widget.text().strip() if widget is not None else ""
+
     def apply_plc_tray_id(self, tray_id, force=False):
         tray_id = int(tray_id) & 0xFFFF
         self.plc_current_tray_id = tray_id
@@ -2073,7 +2077,10 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
     def record_identity(self, position=None, tray_id=None, product_sn=None):
         resolved_tray_id = self.current_tray_id() if tray_id is None else str(tray_id).strip()
         if product_sn is None:
-            resolved_product_sn = self.resolve_product_sn(resolved_tray_id, position)
+            resolved_product_sn = (
+                self.current_product_code()
+                or self.resolve_product_sn(resolved_tray_id, position)
+            )
         else:
             resolved_product_sn = str(product_sn).strip()
         return resolved_tray_id, resolved_product_sn
@@ -2977,6 +2984,8 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.btn_manual_start.setEnabled(True)
         self.set_test_controls_enabled(True)
         self.txt_tray_id.setEnabled(True)
+        if hasattr(self, "txt_product_code"):
+            self.txt_product_code.setEnabled(True)
         self.txt_complete_time.setText(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.lbl_status.setText(f"测试已中止: {reason}")
         self.lbl_avg_status.setText(self.automation_progress_text())
@@ -3015,7 +3024,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
                 "序号",
                 "电机位置",
                 "托盘编号",
-                "产品SN",
+                "产品编码/SN",
                 "时间",
                 "通道",
                 f"RMS({self.display_unit})",
@@ -3069,6 +3078,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
             "acquisition.judgment_max_freq_hz 只限制合格/不合格判定，不影响频谱显示和数据导出。\n"
             "全频主频是在有效 FFT 范围内幅值最大的频率；轴承特征主频只在 9 个轴承特征窗口中选取最大值。\n"
             "记录表还包含 9 个轴承特征频率幅值，以及低频段/中频段/高频段的尖峰数量、尖峰频率、尖峰值和能量和。\n"
+            "“手动产品编码”填写后优先写入记录并加入导出文件名；留空时继续使用托盘位置对应的产品SN。\n"
             "尖峰数量按产品设置里的“波峰阈值”统计，低于该阈值的局部峰不会计数。\n"
             "“保存检测记录”可手动另存下方表格，“导出当前波形/频谱”导出当前波形和 FFT 频谱。\n"
             "产品、采集和 PLC 参数请在 config.json 中维护。",
@@ -3087,9 +3097,11 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
             export_dir = Path(__file__).resolve().parent / configured_dir
         export_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return str(export_dir / f"{prefix}_{timestamp}.csv")
+        safe_product_code = safe_filename_component(self.current_product_code())
+        code_part = f"_{safe_product_code}" if safe_product_code else ""
+        return str(export_dir / f"{prefix}{code_part}_{timestamp}.csv")
 
-    def get_raw_export_path(self):
+    def get_raw_export_path(self, product_code=""):
         configured_dir = Path(str(self.app_config.get("export_dir", "exports")))
         if configured_dir.is_absolute():
             export_dir = configured_dir
@@ -3100,6 +3112,13 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         date_dir = datetime.now().strftime("%y年%m月%d日")
         raw_dir = export_dir / model / date_dir
         raw_dir.mkdir(parents=True, exist_ok=True)
+
+        safe_product_code = safe_filename_component(
+            product_code or self.current_product_code()
+        )
+        if safe_product_code:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            return str(raw_dir / f"{safe_product_code}_{timestamp}.csv")
 
         used_numbers = []
         for path in raw_dir.glob("*.csv"):
@@ -3120,7 +3139,9 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         record_dir = export_dir / model / date_dir
         record_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return str(record_dir / f"records_{timestamp}.csv")
+        safe_product_code = safe_filename_component(self.current_product_code())
+        code_part = f"_{safe_product_code}" if safe_product_code else ""
+        return str(record_dir / f"records{code_part}_{timestamp}.csv")
 
     def get_automatic_spectrum_path(self, position, record_number, product_sn=""):
         configured_dir = Path(str(self.app_config.get("export_dir", "exports")))
@@ -3159,6 +3180,8 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
                         self.txt_operator.text(),
                         "托盘编号",
                         self.current_tray_id(),
+                        "手动产品编码",
+                        self.current_product_code(),
                     ]
                 )
                 writer.writerow(["实时状态", self.lbl_status.text(), "平均状态", self.lbl_avg_status.text()])
@@ -3228,6 +3251,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
             "updated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "model": self.txt_model.text().strip(),
             "tray_id": self.current_tray_id(),
+            "manual_product_code": self.current_product_code(),
             "positions_per_tray": self.positions_per_tray,
             "records_per_motor": self.records_per_motor,
             "start_time": self.txt_start_time.text(),
@@ -3429,6 +3453,9 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.spectrum_ok_word = expected_result_word
         self.cycle_completion_handled = False
         self.txt_start_time.setText(str(payload.get("start_time", "")))
+        product_code_widget = getattr(self, "txt_product_code", None)
+        if product_code_widget is not None:
+            product_code_widget.setText(str(payload.get("manual_product_code", "")))
         self.txt_complete_time.clear()
         self.txt_qty.setText(str(self.positions_per_tray))
         self.update_record_count()
@@ -3546,7 +3573,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
                     tray_id,
                     "电机位置",
                     "" if position is None else position,
-                    "产品SN",
+                    "产品编码/SN",
                     product_sn,
                 ])
                 writer.writerow([
@@ -3679,7 +3706,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
                     "" if record_number is None else int(record_number),
                     "托盘编号",
                     tray_id,
-                    "产品SN",
+                    "产品编码/SN",
                     product_sn,
                     "采集模式",
                     self.active_source_label(),
@@ -3703,7 +3730,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         path, _ = QFileDialog.getSaveFileName(
             self,
             "导出原始频谱",
-            self.get_raw_export_path(),
+            self.get_raw_export_path(product_sn),
             "CSV 文件 (*.csv)",
         )
         if not path:
@@ -4418,6 +4445,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.btn_start.setEnabled(False)
         self.set_test_controls_enabled(False)
         self.txt_tray_id.setEnabled(False)
+        self.txt_product_code.setEnabled(False)
         self.txt_start_time.setText(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.txt_complete_time.clear()
         self.lbl_status.setText("手动采集正在启动...")
@@ -4428,6 +4456,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
             self.btn_start.setEnabled(True)
             self.set_test_controls_enabled(True)
             self.txt_tray_id.setEnabled(True)
+            self.txt_product_code.setEnabled(True)
             QMessageBox.warning(self, "启动失败", "采集线程无法启动。")
 
     def stop_manual_acquisition(self, reason):
@@ -4439,6 +4468,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.btn_start.setEnabled(True)
         self.set_test_controls_enabled(True)
         self.txt_tray_id.setEnabled(True)
+        self.txt_product_code.setEnabled(True)
         self.txt_complete_time.setText(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.lbl_status.setText(f"手动采集已停止: {reason}")
         self.lbl_avg_status.setText(f"【{self.avg_time_sec}秒{self.record_mode_label()}】 已停止")
@@ -4543,6 +4573,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.btn_manual_start.setEnabled(False)
         self.set_test_controls_enabled(False)
         self.txt_tray_id.setEnabled(False)
+        self.txt_product_code.setEnabled(False)
         self.lbl_status.setText("自动化待命，等待PLC电机到位")
         self.lbl_avg_status.setText(self.automation_progress_text())
         self.lbl_plc_state.setText("PLC: 已连接 | 自动化待命")
@@ -4572,6 +4603,7 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.btn_manual_start.setEnabled(True)
         self.set_test_controls_enabled(True)
         self.txt_tray_id.setEnabled(True)
+        self.txt_product_code.setEnabled(True)
         self.txt_complete_time.setText(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.lbl_status.setText(f"测试已停止: {reason}")
         self.lbl_avg_status.setText(self.automation_progress_text())
@@ -4629,6 +4661,8 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         if not resume_existing_position:
             self.current_position_record_count = 0
         self.txt_tray_id.setEnabled(False)
+        if hasattr(self, "txt_product_code"):
+            self.txt_product_code.setEnabled(False)
         tray_id, product_sn = self.record_identity(position)
         identity_text = f"托盘 {tray_id}" if tray_id else "未填写托盘"
         if product_sn:
@@ -4724,6 +4758,8 @@ class VibrationTester(QMainWindow, Ui_MainWindow):
         self.btn_manual_start.setEnabled(False)
         self.set_test_controls_enabled(False)
         self.txt_tray_id.setEnabled(False)
+        if hasattr(self, "txt_product_code"):
+            self.txt_product_code.setEnabled(False)
         self.lbl_status.setText(
             f"整托处理完成（实测{completed_count}/跳过{skipped_count}），等待PLC复位全部完成信号"
         )

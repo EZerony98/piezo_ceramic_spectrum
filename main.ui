@@ -480,7 +480,33 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="4" colspan="6">
+         <item row="1" column="4">
+          <widget class="QLabel" name="label_product_code">
+           <property name="text">
+            <string>手动产品编码:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="5" colspan="2">
+          <widget class="QLineEdit" name="txt_product_code">
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="placeholderText">
+            <string>填写后写入记录和文件名；留空使用SN映射</string>
+           </property>
+           <property name="clearButtonEnabled">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="7" colspan="3">
           <widget class="QLabel" name="lbl_tray_mapping_status">
            <property name="text">
             <string>SN 映射：输入托盘号后按回车检查</string>

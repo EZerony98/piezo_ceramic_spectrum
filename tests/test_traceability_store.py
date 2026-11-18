@@ -125,6 +125,54 @@ class TableStub:
         return self.rows[int(row)][int(column)]
 
 
+class ProductCodeTests(unittest.TestCase):
+    def test_manual_product_code_overrides_tray_mapping(self):
+        class Harness:
+            current_product_code = VibrationTester.current_product_code
+            record_identity = VibrationTester.record_identity
+
+            def __init__(self, product_code):
+                self.txt_product_code = TextWidgetStub(product_code)
+
+            def current_tray_id(self):
+                return "7001"
+
+            def resolve_product_sn(self, tray_id, position):
+                return f"MAPPED-{tray_id}-{position}"
+
+        self.assertEqual(
+            Harness("PZ/001").record_identity(3),
+            ("7001", "PZ/001"),
+        )
+        self.assertEqual(
+            Harness("").record_identity(3),
+            ("7001", "MAPPED-7001-3"),
+        )
+
+    def test_product_code_is_added_to_generated_filenames(self):
+        class Harness:
+            current_product_code = VibrationTester.current_product_code
+            get_export_path = VibrationTester.get_export_path
+            get_raw_export_path = VibrationTester.get_raw_export_path
+            get_automatic_record_path = VibrationTester.get_automatic_record_path
+            get_automatic_spectrum_path = VibrationTester.get_automatic_spectrum_path
+
+            def __init__(self, directory):
+                self.app_config = {"export_dir": str(directory)}
+                self.txt_product_code = TextWidgetStub("PZ/001")
+                self.txt_model = TextWidgetStub("压电陶瓷")
+
+        with tempfile.TemporaryDirectory() as directory:
+            window = Harness(directory)
+            self.assertIn("records_PZ_001_", Path(window.get_export_path("records")).name)
+            self.assertTrue(Path(window.get_raw_export_path()).name.startswith("PZ_001_"))
+            self.assertIn("records_PZ_001_", Path(window.get_automatic_record_path()).name)
+            self.assertIn(
+                "_snPZ_001_",
+                Path(window.get_automatic_spectrum_path(2, 1, "PZ/001")).name,
+            )
+
+
 class CheckpointHarness:
     automatic_checkpoint_paths = VibrationTester.automatic_checkpoint_paths
     record_table_rows = VibrationTester.record_table_rows
@@ -133,11 +181,13 @@ class CheckpointHarness:
     restore_automatic_checkpoint = VibrationTester.restore_automatic_checkpoint
     clear_automatic_checkpoint = VibrationTester.clear_automatic_checkpoint
     automation_progress_text = VibrationTester.automation_progress_text
+    current_product_code = VibrationTester.current_product_code
 
     def __init__(self, directory, records_per_motor=2):
         self.checkpoint_enabled = True
         self.automatic_checkpoint_dir = Path(directory)
         self.txt_model = TextWidgetStub("C68")
+        self.txt_product_code = TextWidgetStub("PZ-001")
         self.txt_start_time = TextWidgetStub("2026-08-14 10:00:00")
         self.txt_complete_time = TextWidgetStub()
         self.txt_qty = TextWidgetStub()

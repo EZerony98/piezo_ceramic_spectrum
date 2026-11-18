@@ -246,11 +246,24 @@ class Ui_MainWindow(object):
 
         self.recordInfoLayout.addWidget(self.txt_tray_id, 1, 1, 1, 3)
 
+        self.label_product_code = QLabel(self.recordGroup)
+        self.label_product_code.setObjectName(u"label_product_code")
+        self.label_product_code.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.recordInfoLayout.addWidget(self.label_product_code, 1, 4, 1, 1)
+
+        self.txt_product_code = QLineEdit(self.recordGroup)
+        self.txt_product_code.setObjectName(u"txt_product_code")
+        self.txt_product_code.setMinimumSize(QSize(150, 0))
+        self.txt_product_code.setClearButtonEnabled(True)
+
+        self.recordInfoLayout.addWidget(self.txt_product_code, 1, 5, 1, 2)
+
         self.lbl_tray_mapping_status = QLabel(self.recordGroup)
         self.lbl_tray_mapping_status.setObjectName(u"lbl_tray_mapping_status")
         self.lbl_tray_mapping_status.setStyleSheet(u"color: #627d98; padding-left: 8px;")
 
-        self.recordInfoLayout.addWidget(self.lbl_tray_mapping_status, 1, 4, 1, 6)
+        self.recordInfoLayout.addWidget(self.lbl_tray_mapping_status, 1, 7, 1, 3)
 
         self.recordInfoLayout.setColumnStretch(1, 3)
         self.recordInfoLayout.setColumnStretch(3, 1)
@@ -404,4 +417,6 @@ class Ui_MainWindow(object):
         self.label_process_log.setText(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c\u65e5\u5fd7", None))
         self.btn_clear_process_log.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u7a7a\u65e5\u5fd7", None))
         self.txt_process_log.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u7a0b\u5e8f\u3001\u91c7\u96c6\u53ca PLC FINS \u901a\u8baf\u4e8b\u4ef6\u5c06\u5728\u8fd9\u91cc\u663e\u793a", None))
+        self.label_product_code.setText(QCoreApplication.translate("MainWindow", u"手动产品编码:", None))
+        self.txt_product_code.setPlaceholderText(QCoreApplication.translate("MainWindow", u"填写后写入记录和文件名；留空使用SN映射", None))
     # retranslateUi
